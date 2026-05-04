@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Info, History, ArrowRight } from "lucide-react";
+import { GraduationCap, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const queryClient = new QueryClient();
@@ -24,21 +23,11 @@ function predictNextSection(rollNumber: number, currentSection: string, totalSec
   return activeSections[nextIndex];
 }
 
-interface PredictionHistory {
-  id: string;
-  rollNumber: string;
-  currentSection: string;
-  totalSections: string;
-  predictedSection: string;
-  timestamp: number;
-}
-
 function SectionPredictor() {
   const [rollNumber, setRollNumber] = useState<string>("");
   const [currentSection, setCurrentSection] = useState<string>("");
   const [totalSections, setTotalSections] = useState<string>("4");
   const [prediction, setPrediction] = useState<string | null>(null);
-  const [history, setHistory] = useState<PredictionHistory[]>([]);
 
   useEffect(() => {
     if (rollNumber && currentSection && totalSections) {
@@ -46,30 +35,6 @@ function SectionPredictor() {
       if (!isNaN(parsedRollNumber)) {
         const result = predictNextSection(parsedRollNumber, currentSection, parseInt(totalSections, 10));
         setPrediction(result);
-        
-        // Save to history (debounced naturally by the fact we only save when inputs are valid, but we want to avoid saving on every keystroke)
-        // Let's implement a small delay to avoid spamming history
-        const timeoutId = setTimeout(() => {
-          setHistory(prev => {
-            const newEntry = {
-              id: Math.random().toString(36).substring(7),
-              rollNumber,
-              currentSection,
-              totalSections,
-              predictedSection: result,
-              timestamp: Date.now()
-            };
-            // Check if last entry is the same to avoid duplicates
-            if (prev.length > 0 && 
-                prev[0].rollNumber === rollNumber && 
-                prev[0].currentSection === currentSection && 
-                prev[0].totalSections === totalSections) {
-              return prev;
-            }
-            return [newEntry, ...prev].slice(0, 5);
-          });
-        }, 1000);
-        return () => clearTimeout(timeoutId);
       } else {
         setPrediction(null);
       }
@@ -93,7 +58,7 @@ function SectionPredictor() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Form & History */}
+          {/* Left Column: Form */}
           <div className="lg:col-span-7 flex flex-col gap-8">
             <Card className="border-primary/20 shadow-md">
               <CardHeader>
@@ -162,31 +127,6 @@ function SectionPredictor() {
               </CardContent>
             </Card>
 
-            {history.length > 0 && (
-              <Card className="border-muted bg-muted/20">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-muted-foreground" />
-                    <CardTitle className="text-base text-muted-foreground">Recent Predictions</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {history.map((entry) => (
-                      <li key={entry.id} className="flex items-center justify-between text-sm bg-background p-3 rounded-md border border-border/50" data-testid={`history-item-${entry.id}`}>
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono bg-muted px-2 py-1 rounded text-xs">{entry.rollNumber}</span>
-                          <span className="text-muted-foreground">{entry.currentSection} <ArrowRight className="inline w-3 h-3 mx-1" /> {entry.predictedSection}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Right Column: Prediction Result */}
